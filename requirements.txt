@@ -1,0 +1,7 @@
+boto3
+requests
+pandas
+pyotp
+python-dotenv
+playwright
+dhanhq==2.1.0
