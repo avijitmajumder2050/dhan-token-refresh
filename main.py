@@ -1,10 +1,14 @@
-import os
-import re
 import time
+import logging
 import pyotp
 import boto3
-import requests
-from playwright.sync_api import sync_playwright, TimeoutError
+from dhanhq import DhanLogin
+
+# =============================
+# LOGGING
+# =============================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # =============================
 # AWS CONFIG
@@ -30,92 +34,67 @@ def put_secure_param(name, value):
     )
 
 # =============================
-# DHAN CONSENT URL
+# TOTP
 # =============================
-def get_consent_url(client_id, api_key, api_secret):
-    url = f"https://auth.dhan.co/app/generate-consent?client_id={client_id}"
-    headers = {"app_id": api_key, "app_secret": api_secret}
-    r = requests.post(url, headers=headers, timeout=15)
-    r.raise_for_status()
-    return (
-        "https://auth.dhan.co/login/consentApp-login"
-        f"?consentAppId={r.json()['consentAppId']}"
-    )
+def generate_totp(totp_secret: str) -> str:
+    return pyotp.TOTP(totp_secret).now()
+
+# =============================
+# DHAN TOKEN GENERATION (3 retries)
+# =============================
+def generate_access_token_with_retry(
+    client_id: str,
+    pin: str,
+    totp_secret: str,
+    retry_delay: int = 120,
+    max_retries: int = 3
+) -> str:
+
+    dhan_login = DhanLogin(client_id)
+
+    for attempt in range(1, max_retries + 1):
+        logger.info("Generating Dhan access token (attempt %s/%s)", attempt, max_retries)
+
+        
+        token_data = dhan_login.generate_token(pin, generate_totp(totp_secret))
+
+       
+
+        if token_data and "accessToken" in token_data:
+            logger.info("Token generated successfully.")
+            return token_data["accessToken"]
+
+        if attempt < max_retries:
+            logger.info("Token response: %s", token_data)
+            logger.warning(
+                "accessToken not found, retrying in %s seconds...",
+                retry_delay
+            )
+            time.sleep(retry_delay)
+
+    raise RuntimeError(f"Failed to obtain accessToken after {max_retries} attempts")
 
 # =============================
 # MAIN
 # =============================
 def main():
-    # ---- Load secrets ----
+    # ---- Load secrets from SSM ----
     client_id   = get_param("/dhan/client_id")
-    api_key     = get_param("/dhan/api_key", True)
-    api_secret  = get_param("/dhan/api_secret", True)
-    totp_secret = get_param("/dhan/totp", True)
-    mobile      = get_param("/dhan/mobile")
     pin         = get_param("/dhan/pin", True)
+    totp_secret = get_param("/dhan/totp", True)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage"]
-        )
-        page = browser.new_page()
-
-        print("➡ Opening consent URL")
-        page.goto(get_consent_url(client_id, api_key, api_secret))
-
-        # ---- Mobile ----
-        page.fill("input", mobile)
-        page.click("text=Proceed")
-
-        # ---- TOTP ----
-        page.wait_for_timeout(1500)
-        page.fill("input", pyotp.TOTP(totp_secret).now())
-        page.click("text=Proceed")
-
-        # ---- PIN ----
-        page.wait_for_timeout(1500)
-        page.fill("input", pin)
-        page.click("text=Proceed")
-
-        # ---- WAIT FOR REDIRECT ----
-        try:
-            page.wait_for_url("**tokenId=**", timeout=30000)
-        except TimeoutError:
-            print("❌ Redirect failed")
-            print("Current URL:", page.url)
-            browser.close()
-            raise
-
-        print("✅ Redirected URL:", page.url)
-
-        # ---- Extract token ----
-        match = re.search(r"tokenId=([a-f0-9\-]+)", page.url)
-        if not match:
-            browser.close()
-            raise RuntimeError(f"tokenId missing in URL: {page.url}")
-
-        token_id = match.group(1)
-        browser.close()
-
-    # ---- Consume token ----
-    token_url = (
-        "https://auth.dhan.co/app/consumeApp-consent"
-        f"?tokenId={token_id}"
+    # ---- Generate token ----
+    access_token = generate_access_token_with_retry(
+        client_id=client_id,
+        pin=pin,
+        totp_secret=totp_secret
     )
-    r = requests.get(
-        token_url,
-        headers={"app_id": api_key, "app_secret": api_secret},
-        timeout=15
-    )
-    r.raise_for_status()
 
-    access_token = r.json()["accessToken"]
+    logger.info("Access token generated successfully")
 
-    # ---- Save token ----
+    # ---- Save token to SSM ----
     put_secure_param("/dhan/access_token", access_token)
-
-    print("✅ DHAN access token updated successfully")
+    logger.info("Access token saved to SSM")
 
 # =============================
 if __name__ == "__main__":
