@@ -103,17 +103,17 @@ This repository contains an automated system to retrieve stock OHLC data and ref
 
 ```mermaid
 flowchart TD
-EB(EventBridge Scheduler)
-Lambda(AWS Lambda)
-PS[Parameter Store]
-EC2(EC2 Instance)
-Docker1["Docker Container 1 (Token Refresh)"]
-Docker2["Docker Container 2 (OHLC Fetch)"]
-GitHub[GitHub Repository]
-ECR[AWS ECR Docker Images]
-S3[S3 Bucket for Stock CSVs]
-DHAN[DHAN API]
-Telegram[Telegram Notification]
+EB["1. EventBridge Scheduler"]
+Lambda["2. AWS Lambda"]
+PS["3. Parameter Store"]
+EC2["4. EC2 Instance"]
+Docker1["5. Docker Container 1 - Token Refresh"]
+Docker2["6. Docker Container 2 - OHLC Fetch"]
+GitHub["7. GitHub Repository"]
+ECR["8. AWS ECR Docker Images"]
+S3["9. S3 Bucket for Stock CSVs"]
+DHAN["10. DHAN API"]
+Telegram["11. Telegram Notification"]
 
 EB -->|Trigger every trading day 8:00 AM IST| Lambda
 Lambda -->|Read Launch Template ID| PS
@@ -149,4 +149,5 @@ style ECR fill:#ccf,stroke:#333,stroke-width:2px
 style S3 fill:#ffc,stroke:#333,stroke-width:2px
 style DHAN fill:#fdd,stroke:#333,stroke-width:2px
 style Telegram fill:#9ff,stroke:#333,stroke-width:2px
+
 
