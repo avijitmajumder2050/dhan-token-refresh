@@ -150,7 +150,7 @@ style S3 fill:#ffc,stroke:#333,stroke-width:2px
 style DHAN fill:#fdd,stroke:#333,stroke-width:2px
 style Telegram fill:#9ff,stroke:#333,stroke-width:2px
 
-## Sequence Diagram
+### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
