@@ -1,5 +1,39 @@
 # Trading Data Automation Workflow
 
+
+### Workflow Diagram (Sequence)
+
+```text
+AWS EventBridge (8:00 AM IST)
+        |
+        v
+AWS Lambda
+        |
+        v
+Retrieve EC2 Launch Template from Parameter Store
+        |
+        v
+Launch EC2 Instance with Bootstrap Script
+        |
+        +---------------------------+
+        |                           |
+        v                           v
+Docker Container 1            Docker Container 2
+(Token Refresh)               (OHLC Data Fetch)
+  - Fetch client ID             - Get access token
+  - Renew access token          - Read stock CSV from S3
+  - Retry every 2 minutes       - Fetch 200-day OHLC via DHAN SDK
+  - Write token to Parameter    - Save CSV to S3
+    Store                       - Exit container
+  - Exit container
+        |
+        v
+Notify via Telegram
+        |
+        v
+Terminate EC2 instance
+
+
 ## Overview
 
 This repository contains an automated system to retrieve stock OHLC data and refresh access tokens using the DHAN API. The workflow leverages **AWS EventBridge, Lambda, EC2, Docker, and Python DHAN SDK**, ensuring automated data processing every trading day.
