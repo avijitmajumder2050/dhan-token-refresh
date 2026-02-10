@@ -54,6 +54,40 @@ This repository contains an automated system to retrieve stock OHLC data and ref
 - **CI/CD:** GitHub repository for code versioning
 - **Monitoring & Notifications:** Telegram API for job status
 
+
+---
+
+## Workflow Diagram (Sequence)
+
+```text
+AWS EventBridge (8:00 AM IST)
+        |
+        v
+AWS Lambda
+        |
+        v
+Retrieve EC2 Launch Template from Parameter Store
+        |
+        v
+Launch EC2 Instance with Bootstrap Script
+        |
+        +---------------------------+
+        |                           |
+        v                           v
+Docker Container 1            Docker Container 2
+(Token Refresh)               (OHLC Data)
+  - Fetch client ID             - Get access token
+  - Renew token                 - Read stock CSV from S3
+  - Retry every 2 min            - Pull 200-day OHLC via DHAN SDK
+  - Write token to Parameter     - Save CSV to S3
+    Store                        - Exit
+  - Exit container
+        |
+        v
+Notify via Telegram
+        |
+        v
+Terminate EC2 instance
 ---
 
 ## Deployment Steps
