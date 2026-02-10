@@ -103,49 +103,50 @@ This repository contains an automated system to retrieve stock OHLC data and ref
 
 ```mermaid
 flowchart TD
-    EB(EventBridge Scheduler)
-    Lambda(AWS Lambda)
-    PS[Parameter Store]
-    EC2(EC2 Instance)
-    Docker1[Docker Container 1 (Token Refresh)]
-    Docker2[Docker Container 2 (OHLC Fetch)]
-    GitHub[GitHub Repository]
-    ECR[AWS ECR Docker Images]
-    S3[S3 Bucket for Stock CSVs]
-    DHAN[DHAN API]
-    Telegram[Telegram Notification]
+EB(EventBridge Scheduler)
+Lambda(AWS Lambda)
+PS[Parameter Store]
+EC2(EC2 Instance)
+Docker1["Docker Container 1 (Token Refresh)"]
+Docker2["Docker Container 2 (OHLC Fetch)"]
+GitHub[GitHub Repository]
+ECR[AWS ECR Docker Images]
+S3[S3 Bucket for Stock CSVs]
+DHAN[DHAN API]
+Telegram[Telegram Notification]
 
-    EB -->|Trigger every trading day 8:00 AM IST| Lambda
-    Lambda -->|Read Launch Template ID| PS
-    Lambda -->|Launch EC2 instance with bootstrap script| EC2
+EB -->|Trigger every trading day 8:00 AM IST| Lambda
+Lambda -->|Read Launch Template ID| PS
+Lambda -->|Launch EC2 instance with bootstrap script| EC2
 
-    EC2 -->|Pull GitHub code| GitHub
-    EC2 -->|Pull Docker images| ECR
-    EC2 -->|Start Docker 1| Docker1
+EC2 -->|Pull GitHub code| GitHub
+EC2 -->|Pull Docker images| ECR
+EC2 -->|Start Docker 1| Docker1
 
-    Docker1 -->|Read clientID/secret| PS
-    Docker1 -->|Call DHAN API to refresh token| DHAN
-    Docker1 -->|Write access token| PS
-    Docker1 -->|Exit container| EC2
+Docker1 -->|Read clientID/secret| PS
+Docker1 -->|Call DHAN API to refresh token| DHAN
+Docker1 -->|Write access token| PS
+Docker1 -->|Exit container| EC2
 
-    EC2 -->|Start Docker 2| Docker2
-    Docker2 -->|Read access token| PS
-    Docker2 -->|Read stock list CSV| S3
-    Docker2 -->|Call DHAN API to fetch 200-day OHLC data| DHAN
-    Docker2 -->|Write stock CSVs| S3
-    Docker2 -->|Exit container| EC2
+EC2 -->|Start Docker 2| Docker2
+Docker2 -->|Read access token| PS
+Docker2 -->|Read stock list CSV| S3
+Docker2 -->|Call DHAN API to fetch 200-day OHLC data| DHAN
+Docker2 -->|Write stock CSVs| S3
+Docker2 -->|Exit container| EC2
 
-    EC2 -->|Send job completion message| Telegram
-    EC2 -->|Auto-terminate| EC2
+EC2 -->|Send job completion message| Telegram
+EC2 -->|Auto-terminate| EC2
 
-    style EB fill:#f9f,stroke:#333,stroke-width:2px
-    style Lambda fill:#bbf,stroke:#333,stroke-width:2px
-    style PS fill:#ff9,stroke:#333,stroke-width:2px
-    style EC2 fill:#bfb,stroke:#333,stroke-width:2px
-    style Docker1 fill:#fc9,stroke:#333,stroke-width:2px
-    style Docker2 fill:#fc9,stroke:#333,stroke-width:2px
-    style GitHub fill:#ccf,stroke:#333,stroke-width:2px
-    style ECR fill:#ccf,stroke:#333,stroke-width:2px
-    style S3 fill:#ffc,stroke:#333,stroke-width:2px
-    style DHAN fill:#fdd,stroke:#333,stroke-width:2px
-    style Telegram fill:#9ff,stroke:#333,stroke-width:2px
+style EB fill:#f9f,stroke:#333,stroke-width:2px
+style Lambda fill:#bbf,stroke:#333,stroke-width:2px
+style PS fill:#ff9,stroke:#333,stroke-width:2px
+style EC2 fill:#bfb,stroke:#333,stroke-width:2px
+style Docker1 fill:#fc9,stroke:#333,stroke-width:2px
+style Docker2 fill:#fc9,stroke:#333,stroke-width:2px
+style GitHub fill:#ccf,stroke:#333,stroke-width:2px
+style ECR fill:#ccf,stroke:#333,stroke-width:2px
+style S3 fill:#ffc,stroke:#333,stroke-width:2px
+style DHAN fill:#fdd,stroke:#333,stroke-width:2px
+style Telegram fill:#9ff,stroke:#333,stroke-width:2px
+
