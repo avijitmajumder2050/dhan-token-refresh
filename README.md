@@ -147,6 +147,7 @@ sequenceDiagram
     %% Completion
     EC2->>Telegram: Notify job completion
     EC2->>EC2: Auto-terminate
+```
 
 ---
 
