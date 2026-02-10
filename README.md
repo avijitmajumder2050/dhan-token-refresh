@@ -99,57 +99,44 @@ This repository contains an automated system to retrieve stock OHLC data and ref
 
 ---
 
-## Full Trading Data Automation Flow
+## Sequence Diagram 
 
 ```mermaid
-flowchart TD
-    %% Nodes
-    EB["1. EventBridge Scheduler"]
-    Lambda["2. AWS Lambda"]
-    PS["3. Parameter Store"]
-    EC2["4. EC2 Instance"]
-    Docker1["5. Docker Container 1 - Token Refresh"]
-    Docker2["6. Docker Container 2 - OHLC Fetch"]
-    GitHub["7. GitHub Repository"]
-    ECR["8. AWS ECR Docker Images"]
-    S3["9. S3 Bucket for Stock CSVs"]
-    DHAN["10. DHAN API"]
-    Telegram["11. Telegram Notification"]
+sequenceDiagram
+    participant EB as 1. EventBridge
+    participant Lambda as 2. AWS Lambda
+    participant PS as 3. Parameter Store
+    participant EC2 as 4. EC2 Instance
+    participant Docker1 as 5. Docker Token Refresh
+    participant Docker2 as 6. Docker OHLC Fetch
+    participant S3 as 7. S3 Bucket
+    participant DHAN as 8. DHAN API
+    participant Telegram as 9. Telegram
 
-    %% Flow
-    EB -->|Trigger daily 8:00 AM IST| Lambda
-    Lambda -->|Read Launch Template ID| PS
-    Lambda -->|Launch EC2 instance| EC2
+    %% Trigger
+    EB->>Lambda: Trigger at 8:00 AM IST
+    Lambda->>PS: Get EC2 Launch Template ID
+    Lambda->>EC2: Launch instance with bootstrap script
 
-    EC2 -->|Pull GitHub code| GitHub
-    EC2 -->|Pull Docker images| ECR
-    EC2 --> Docker1
+    %% EC2 Bootstrap
+    EC2->>PS: Get GitHub repo URL
+    EC2->>EC2: Pull GitHub code
+    EC2->>Docker1: Start Token Refresh container
 
-    Docker1 -->|Read client ID/secret| PS
-    Docker1 -->|Call DHAN API to refresh token| DHAN
-    Docker1 -->|Write access token| PS
-    Docker1 --> EC2
+    %% Token Refresh
+    Docker1->>PS: Read client ID/secret
+    Docker1->>DHAN: Refresh access token
+    Docker1->>PS: Write access token
+    Docker1-->>EC2: Exit container
 
-    EC2 --> Docker2
-    Docker2 -->|Read access token| PS
-    Docker2 -->|Read stock list CSV| S3
-    Docker2 -->|Call DHAN API to fetch 200-day OHLC data| DHAN
-    Docker2 -->|Save CSVs| S3
-    Docker2 --> EC2
+    %% OHLC Data Fetch
+    EC2->>Docker2: Start OHLC Fetch container
+    Docker2->>PS: Read access token
+    Docker2->>S3: Read stock list CSV
+    Docker2->>DHAN: Fetch 200-day OHLC data
+    Docker2->>S3: Save stock CSVs
+    Docker2-->>EC2: Exit container
 
-    EC2 -->|Send job completion notification| Telegram
-    EC2 -->|Auto-terminate| EC2
-
-    %% Styling
-    style EB fill:#f9f,stroke:#333,stroke-width:2px
-    style Lambda fill:#bbf,stroke:#333,stroke-width:2px
-    style PS fill:#ff9,stroke:#333,stroke-width:2px
-    style EC2 fill:#bfb,stroke:#333,stroke-width:2px
-    style Docker1 fill:#fc9,stroke:#333,stroke-width:2px
-    style Docker2 fill:#fc9,stroke:#333,stroke-width:2px
-    style GitHub fill:#ccf,stroke:#333,stroke-width:2px
-    style ECR fill:#ccf,stroke:#333,stroke-width:2px
-    style S3 fill:#ffc,stroke:#333,stroke-width:2px
-    style DHAN fill:#fdd,stroke:#333,stroke-width:2px
-    style Telegram fill:#9ff,stroke:#333,stroke-width:2px
-
+    %% Completion
+    EC2->>Telegram: Notify job completion
+    EC2->>EC2: Auto-terminate
