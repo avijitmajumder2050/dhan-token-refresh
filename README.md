@@ -150,35 +150,4 @@ style S3 fill:#ffc,stroke:#333,stroke-width:2px
 style DHAN fill:#fdd,stroke:#333,stroke-width:2px
 style Telegram fill:#9ff,stroke:#333,stroke-width:2px
 
-### Sequence Diagram
 
-```mermaid
-sequenceDiagram
-    participant EB as 1. EventBridge
-    participant Lambda as 2. AWS Lambda
-    participant PS as 3. Parameter Store
-    participant EC2 as 4. EC2 Instance
-    participant Docker1 as 5. Docker Container 1 (Token Refresh)
-    participant Docker2 as 6. Docker Container 2 (OHLC Fetch)
-    participant S3 as 7. S3 Bucket
-    participant DHAN as 8. DHAN API
-    participant Telegram as 9. Telegram
-
-    EB->>Lambda: Trigger at 8:00 AM IST
-    Lambda->>PS: Get EC2 Launch Template ID
-    Lambda->>EC2: Launch instance with bootstrap script
-    EC2->>PS: Get GitHub repo URL
-    EC2->>EC2: Pull GitHub code
-    EC2->>Docker1: Start container (Token Refresh)
-    Docker1->>PS: Get client ID / secret
-    Docker1->>DHAN: Refresh access token
-    Docker1->>PS: Write access token
-    Docker1-->>EC2: Exit container
-    EC2->>Docker2: Start container (OHLC Fetch)
-    Docker2->>PS: Read access token
-    Docker2->>S3: Read stock list CSV
-    Docker2->>DHAN: Fetch 200-day OHLC data
-    Docker2->>S3: Save stock CSVs
-    Docker2-->>EC2: Exit container
-    EC2->>Telegram: Notify job completion
-    EC2->>EC2: Auto-terminate
