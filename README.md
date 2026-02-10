@@ -103,7 +103,7 @@ This repository contains an automated system to retrieve stock OHLC data and ref
 
 ```mermaid
 flowchart TD
-    %% Participants / Nodes
+    %% Nodes
     EB["1. EventBridge Scheduler"]
     Lambda["2. AWS Lambda"]
     PS["3. Parameter Store"]
@@ -116,26 +116,26 @@ flowchart TD
     DHAN["10. DHAN API"]
     Telegram["11. Telegram Notification"]
 
-    %% Sequence / Flow
+    %% Flow
     EB -->|Trigger daily 8:00 AM IST| Lambda
     Lambda -->|Read Launch Template ID| PS
     Lambda -->|Launch EC2 instance| EC2
 
     EC2 -->|Pull GitHub code| GitHub
     EC2 -->|Pull Docker images| ECR
-    EC2 -->|Start Docker 1 (Token Refresh)| Docker1
+    EC2 --> Docker1
 
     Docker1 -->|Read client ID/secret| PS
     Docker1 -->|Call DHAN API to refresh token| DHAN
     Docker1 -->|Write access token| PS
-    Docker1 -->|Exit container| EC2
+    Docker1 --> EC2
 
-    EC2 -->|Start Docker 2 (OHLC Fetch)| Docker2
+    EC2 --> Docker2
     Docker2 -->|Read access token| PS
     Docker2 -->|Read stock list CSV| S3
     Docker2 -->|Call DHAN API to fetch 200-day OHLC data| DHAN
     Docker2 -->|Save CSVs| S3
-    Docker2 -->|Exit container| EC2
+    Docker2 --> EC2
 
     EC2 -->|Send job completion notification| Telegram
     EC2 -->|Auto-terminate| EC2
